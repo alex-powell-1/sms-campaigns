@@ -1,5 +1,5 @@
-application_title = "Settlemyre Nursery Text Messaging"
-header_label_text = "Settlemyre Nursery: "
+application_title = ""
+header_label_text = ""
 
 # Color Pallet
 DARK_GREEN = "#3A4D39"
@@ -10,4 +10,4 @@ BACKGROUND_COLOR = "#ECE3CE"
 
 
 # Messaging
-header_text = "Settlemyre Nursery: "
+header_text = ""
