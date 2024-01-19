@@ -17,7 +17,9 @@ Methods:
    - LOY_PTS_BAL is a balance of reward points
 
 3) Customer Segment
+
 Currently, texts can be sent for the following criteria:
+
 1) Management Test Group
 2) Wholesale Customers
 3) Retail Customers: All
