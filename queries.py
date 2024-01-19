@@ -10,17 +10,13 @@ six_months_ago = date.today()+relativedelta(months=-6)
 one_year_ago = date.today()+relativedelta(years=-1)
 two_year_ago = date.today()+relativedelta(years=-2)
 
-# Alex Powell Only
-test_group_1 = """
-SELECT CUST_NO, FST_NAM, PHONE_1 as phone, LOY_PTS_BAL as rewards
-FROM AR_CUST
-WHERE PHONE_1 = '828-234-1265'
+
 """
-# Alex Powell, Brandon Settlemyre, Michelle Settlemyre, Beth Lane
+# Management Test Group
 test_group_2 = """
 SELECT CUST_NO, FST_NAM, PHONE_1 as phone, LOY_PTS_BAL as rewards
 FROM AR_CUST
-WHERE PHONE_1 = '828-234-1265' OR PHONE_1 = '828-390-8030' OR PHONE_1 = '828-403-3317' OR PHONE_1 = '704-488-8239'
+WHERE PHONE_1 = '' OR PHONE_1 = '' OR PHONE_1 = '' OR PHONE_1 = ''
 """
 # All Retail Customers
 retail_all = """
