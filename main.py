@@ -182,7 +182,7 @@ def send_text():
                     else:
                         photo_url = photo_input.get()
                         twilio_message = client.messages.create(
-                            from_='+18284390961',
+                            from_=creds.TWILIO_PHONE_NUMBER,
                             media_url=[photo_url],
                             to=cp_data[y]["PHONE_1"],
                             body=final_message
@@ -195,7 +195,7 @@ def send_text():
                         print("testing - no photo")
                     else:
                         twilio_message = client.messages.create(
-                            from_='+18284390961',
+                            from_=creds.TWILIO_PHONE_NUMBER,
                             to=cp_data[y]["PHONE_1"],
                             body=final_message
                         )
