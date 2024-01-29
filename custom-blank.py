@@ -7,7 +7,8 @@ MEDIUM_DARK_GREEN = "#4F6F52"
 MEDIUM_GREEN = "#739072"
 BACKGROUND_COLOR = "#ECE3CE"
 
-
+# Graphics
+logo = ""
 
 # Messaging
 header_text = ""
