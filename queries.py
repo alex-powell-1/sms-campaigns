@@ -171,24 +171,21 @@ yesterday_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
 WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
-TKT_DAT = '{one_day_ago} 00:00:00' AND
-{standard_filter}
+TKT_DAT = '{one_day_ago} 00:00:00'
 """
 
 five_days_ago_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
 WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
-TKT_DAT = '{five_day_ago} 00:00:00' AND
-{standard_filter}
+TKT_DAT = '{five_day_ago} 00:00:00'
 """
 
 one_week_ago_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
 WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
-TKT_DAT = '{one_week_ago} 00:00:00' AND
-{standard_filter}
+TKT_DAT = '{one_week_ago} 00:00:00'
 """
 # Birthday Queries
 january_bday = f"""
