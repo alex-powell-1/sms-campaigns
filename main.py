@@ -12,14 +12,14 @@ import csv
 import pandas
 import creds
 import custom
-
-
+r"""
   ___ __  __ ___    ___   _   __  __ ___  _   ___ ___ _  _ ___ 
  / __|  \/  / __|  / __| /_\ |  \/  | _ \/_\ |_ _/ __| \| / __|
  \__ | |\/| \__ \ | (__ / _ \| |\/| |  _/ _ \ | | (_ | .` \__ \
  |___|_|  |_|___/  \___/_/ \_|_|  |_|_|/_/ \_|___\___|_|\_|___/
 
-Author: Alex Powell                                                   
+Author: Alex Powell          
+"""
 
 TEST_MODE = False
 
@@ -55,19 +55,23 @@ def select_file():
     global csv_data_dict
     csv_data_dict = csv_data.to_dict('records')
     # Format phone number
-    start_code = "+1"
     z = 0
     for customer in csv_data_dict:
         customer_phone_from_csv = csv_data_dict[z]["PHONE_1"]
-        csv_data_dict[z]["PHONE_1"] = start_code + customer_phone_from_csv.replace("-", "")
-        z += 1
+        try:
+            csv_data_dict[z]["PHONE_1"] = format_phone(customer_phone_from_csv, prefix=True)
+        except:
+            csv_data_dict[z]["PHONE_1"] = "error"
+        else:
+            z += 1
 
     # Show first person's info
     try:
         showinfo(
             title='Selected File',
             message=f"First Entry:\n{csv_data_dict[0]["FST_NAM"]}, {csv_data_dict[0]["PHONE_1"]}, "
-                    f"{csv_data_dict[0]["LOY_PTS_BAL"]}")
+                    f"{csv_data_dict[0]["LOY_PTS_BAL"]}\n\n"
+                    f"Total messages to send: {len(csv_data_dict)}")
         return csv_data_dict
 
     # Show Error If CSV doesn't include Name and Phone
@@ -108,136 +112,6 @@ def query_db(sql_query):
         messagebox.showerror(title="Network Error", message="Cannot connect to server. Check VPN settings.")
 
 
-# ----------------------Calculate size of segment------------------------------ #
-def segment_length():
-    global segment
-    try:
-        segment = listbox.get(listbox.curselection())
-        sql_query = segment_dict[segment]
-        messages_to_send = len(query_db(sql_query))
-        if messages_to_send < 1:
-            list_size.config(text=f"List is empty.")
-        elif messages_to_send == 1:
-            # Because, grammar.
-            list_size.config(text=f"{messages_to_send} message will be sent.")
-        else:
-            list_size.config(text=f"{messages_to_send} messages will be sent.")
-    except tkinter.TclError:
-        list_size.config(text="Please select an option")
-
-
-# ---------------------------- TWILIO TEXT API ------------------------------ #
-def send_text():
-    # Get Listbox Value, Present Message Box with Segment
-    if segment_checkbutton_used() == 1:
-        global segment
-        segment = listbox.get(listbox.curselection())
-        message_script = message_box.get("1.0", END)
-        confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
-                                             f" \n\nMessage: {message_script}\n\nSent to: {segment}")
-    elif single_number_checkbutton_used() == 1:
-        original_number = single_number_input.get()
-        single_phone = format_phone(original_number, prefix=True)
-        message_script = message_box.get("1.0", END)
-        confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
-                                             f" \n\nMessage: {message_script}\n\nSent to: {original_number}")
-
-    elif csv_checkbutton_used() == 1:
-        message_script = message_box.get("1.0", END)
-        confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
-                                             f" \n\nMessage: {message_script}\n\nent to: CSV List")
-    if confirm_box:
-
-        # -------GET DATA FROM SQL---------#
-        if segment_checkbutton_used() == 1:
-            sql_query = segment_dict[segment]
-            cp_data = query_db(sql_query)
-        # ---------------OR----------------#
-
-        # -------GET DATA FROM CSV---------#
-        elif csv_checkbutton_used() == 1:
-            cp_data = csv_data_dict
-
-        # ----------DATA FOR SINGLE PHONE---------#
-        elif single_number_checkbutton_used() == 1:
-            cp_data = [{"CUST_NO": 'NA', "FST_NAM": 'NA', "PHONE_1": single_phone,
-                        "LOY_PTS_BAL": 'NA', "message": "", 'response_code': ""}]
-
-        # Create Log
-        header_list = ['CUST_NO', 'FST_NAM', 'PHONE_1', 'LOY_PTS_BAL', 'message', 'response_code']
-        log_file = open(creds.log_file_path, 'a')
-        w = csv.DictWriter(log_file, delimiter=',', fieldnames=header_list)
-        w.writeheader()
-
-        y = 0
-        for customer in cp_data:
-            # message_index = int(cp_data.index(customer)) + 1
-            # progress_label.config(text=f"{message_index}/{total_messages}")
-            try:
-                # Get Customer Name
-                name = cp_data[y]["FST_NAM"]
-                rewards = "$" + str(cp_data[y]["LOY_PTS_BAL"])
-                header_text = custom.header_text
-                if single_number_checkbutton_used() == 1:
-                    final_message = message_script
-                else:
-                    final_message = header_text + message_script.replace("{name}", name).replace("{rewards}",
-                                                                                             rewards)
-
-                if photo_checkbutton_used() == 1:
-                    if test_mode_checkbutton_used() == 1:
-                        print("testing - photo")
-                    else:
-                        photo_url = photo_input.get()
-                        twilio_message = client.messages.create(
-                            from_=creds.TWILIO_PHONE_NUMBER,
-                            media_url=[photo_url],
-                            to=cp_data[y]["PHONE_1"],
-                            body=final_message
-                        )
-                        response = twilio_message.sid
-                        print(response)
-
-                elif photo_checkbutton_used() == 0:
-                    if test_mode_checkbutton_used() == 1:
-                        print("testing - no photo")
-                    else:
-                        twilio_message = client.messages.create(
-                            from_=creds.TWILIO_PHONE_NUMBER,
-                            to=cp_data[y]["PHONE_1"],
-                            body=final_message
-                        )
-                        response = twilio_message.sid
-                        print(response)
-
-                # Update Status Label
-                # progress_text_label.config(text=f"Sent to: {name} at {cp_data[y]["PHONE_1"]}")
-                progress_text_label.config(text=f"In progress. Please wait.")
-                window.update()
-                # Update Log
-                cp_data[y]["message"] = f"{final_message.strip().replace('"', '')}"
-                if test_mode_checkbutton_used() == 1:
-                    cp_data[y]["response_code"] = "test mode"
-                else:
-                    cp_data[y]["response_code"] = response
-                w.writerow(customer)
-
-                y += 1
-
-            except twilio.base.exceptions.TwilioRestException as err:
-                if str(err)[-22:] == "is not a mobile number":
-                    cp_data[y]["message"] = f"{final_message.strip().replace('"', '')}"
-                    cp_data[y]["response_code"] = "landline"
-                    w.writerow(customer)
-                    move_phone_1_to_mbl_phone_1(cp_data[y]["PHONE_1"])
-                    y += 1
-                    continue
-        progress_text_label.config(text=f"Completed.")
-        log_file.close()
-        if messagebox.askyesno(title="Completed", message="Would you like to see the log?"):
-            subprocess.Popen(fr'explorer /select, {creds.log_file_path}')
-
-
 def move_phone_1_to_mbl_phone_1(phone_number):
     cp_phone = format_phone(phone_number, mode="Counterpoint")
     move_landline_query = f"""
@@ -257,6 +131,261 @@ def move_phone_1_to_mbl_phone_1(phone_number):
     cursor.execute(move_landline_query)
     connection.commit()
     cursor.close()
+
+
+def unsubscribe_customer_from_sms(customer):
+    customer_number = customer['CUST_NO']
+    unsubscribe_sms_query = f"""
+            UPDATE AR_CUST
+            SET INCLUDE_IN_MARKETING_MAILOUTS = 'N'
+            WHERE CUST_NO = '{customer_number}'
+        """
+
+    connection = pyodbc.connect(
+        f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={SERVER};PORT=1433;DATABASE={DATABASE};'
+        f'UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;timeout=3')
+
+    cursor = connection.cursor()
+    cursor.execute(unsubscribe_sms_query)
+    connection.commit()
+    cursor.close()
+
+
+# ----------------------Calculate size of segment------------------------------ #
+def segment_length():
+    # global segment
+    try:
+        segment = listbox.get(listbox.curselection())
+        sql_query = segment_dict[segment]
+        messages_to_send = len(query_db(sql_query))
+        if messages_to_send < 1:
+            list_size.config(text=f"List is empty.")
+        elif messages_to_send == 1:
+            # Because, grammar.
+            list_size.config(text=f"{messages_to_send} message will be sent.")
+        else:
+            list_size.config(text=f"{messages_to_send} messages will be sent.")
+    except tkinter.TclError:
+        list_size.config(text="Please select an option")
+
+
+# ---------------------------- TWILIO TEXT API ------------------------------ #
+def send_text():
+    # Get Listbox Value, Present Message Box with Segment
+    segment = ""
+    message_script = ""
+    response = ""
+    single_phone = ""
+    cp_data = {}
+
+    # ------- Validate User Inputs -------- #
+
+    if segment_checkbutton_used() == 1:
+        # global segment
+        try:
+            segment = listbox.get(listbox.curselection())
+        except tkinter.TclError:
+            messagebox.showerror(title="Error!", message="You did not pick a selection. Try again.")
+            confirm_box = False
+        else:
+            message_script = message_box.get("1.0", END)
+            confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
+                                             f" \n\nMessage: {message_script}\n\nSent to: {segment}")
+    elif single_number_checkbutton_used() == 1:
+        original_number = single_number_input.get()
+        single_phone = format_phone(original_number, prefix=True)
+        if len(single_phone) == 12:
+            message_script = message_box.get("1.0", END)
+            confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
+                                                 f" \n\nMessage: {message_script}\n\nSent to: {original_number}")
+        else:
+            messagebox.showerror(title="error", message="Invalid phone number. Please try again.")
+            confirm_box = False
+
+    elif csv_checkbutton_used() == 1:
+        if csv_data_dict == {}:
+            messagebox.showerror(title="CSV Error", message="Please select a csv file with the following header:\n"
+                                                            "CUST_NO,FST_NAM,PHONE_1,LOY_PTS_BAL\n"
+                                                            "(No spaces allowed!)")
+            confirm_box = False
+
+        else:
+            message_script = message_box.get("1.0", END)
+            confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
+                                                 f" \n\nMessage: {message_script}\n\nSent to: CSV List\n"
+                                                 f"Total Messages to Send: {len(csv_data_dict)}")
+    else:
+        confirm_box = messagebox.showinfo(title="Error", message="You did not choose a selection. Try again.")
+
+    if confirm_box and (segment_checkbutton_used() == 1 or
+                        single_number_checkbutton_used() == 1 or
+                        csv_checkbutton_used() == 1):
+
+        # ----------GET DATA FROM SQL------------#
+        if segment_checkbutton_used() == 1:
+            sql_query = segment_dict[segment]
+            cp_data = query_db(sql_query)
+
+        # ------------------OR-------------------#
+
+        # -------GET DATA FROM CSV---------#
+        elif csv_checkbutton_used() == 1:
+            cp_data = csv_data_dict
+
+        # ----------DATA FOR SINGLE PHONE---------#
+        elif single_number_checkbutton_used() == 1:
+            cp_data = [{"CUST_NO": 'NA', "FST_NAM": 'NA', "PHONE_1": single_phone,
+                        "LOY_PTS_BAL": 'NA', "message": "", 'response_code': ""}]
+
+        total_messages_sent = 0
+
+        for customer in cp_data:
+            customer['count'] = f"{total_messages_sent}/{len(cp_data)}"
+            # Get Customer Name
+            name = customer["FST_NAM"]
+            rewards = "$" + str(customer["LOY_PTS_BAL"])
+            header_text = custom.header_text
+
+            if single_number_checkbutton_used() == 1:
+                final_message = message_script
+            elif name == 'Change':
+                final_message = header_text + message_script.replace("{name}", "").replace("{rewards}",
+                                                                                             rewards)
+            else:
+                final_message = header_text + message_script.replace("{name}", name).replace("{rewards}",
+                                                                                         rewards)
+
+            if photo_checkbutton_used() == 1:
+
+                if test_mode_checkbutton_used() == 1:
+                    print("testing - photo")
+
+                else:
+                    if customer["PHONE_1"] != "error":
+                        photo_url = photo_input.get()
+                        try:
+                            twilio_message = client.messages.create(
+                            from_=creds.TWILIO_PHONE_NUMBER,
+                            media_url=[photo_url],
+                            to=customer["PHONE_1"],
+                            body=final_message
+                        )
+                        except twilio.base.exceptions.TwilioRestException as err:
+                            customer["message"] = f"{final_message.strip().replace('"', '')}"
+                            if str(err)[-22:] == "is not a mobile number":
+                                customer["response_code"] = "landline"
+                                write_log(customer)
+                                move_phone_1_to_mbl_phone_1(customer["PHONE_1"])
+                                continue
+
+                            elif str(err)[0:112] == ("HTTP 400 error: Unable to create record: "
+                                                     "Permission to send an SMS has not been enabled "
+                                                     "for the region indicated"):
+                                customer["response_code"] = "No Permission to send SMS"
+                                write_log(customer)
+                                continue
+
+                            elif err == ("HTTP 400 error: Unable to create record: "
+                                         "Attempt to send to unsubscribed recipient"):
+                                customer["response_code"] = "Unsubscribed"
+                                unsubscribe_customer_from_sms(customer)
+                                write_log(customer)
+                                continue
+
+                            else:
+                                customer['response_code'] = "Unknown Error"
+                                write_log(customer)
+                                continue
+                        else:
+                            response = twilio_message.sid
+
+                    else:
+                        customer['response_code'] = 'Invalid phone'
+                        write_log(customer)
+                        continue
+
+            elif photo_checkbutton_used() == 0:
+
+                if test_mode_checkbutton_used() == 1:
+                    print("testing - no photo")
+
+                else:
+                    if customer["PHONE_1"] != "error":
+                        try:
+                            twilio_message = client.messages.create(
+                                from_=creds.TWILIO_PHONE_NUMBER,
+                                to=customer["PHONE_1"],
+                                body=final_message
+                            )
+                        except twilio.base.exceptions.TwilioRestException as err:
+                            customer["message"] = f"{final_message.strip().replace('"', '')}"
+                            if str(err)[-22:] == "is not a mobile number":
+                                customer["message"] = f"{final_message.strip().replace('"', '')}"
+                                customer["response_code"] = "landline"
+                                write_log(customer)
+                                move_phone_1_to_mbl_phone_1(customer["PHONE_1"])
+                                continue
+
+                            elif str(err)[0:112] == ("HTTP 400 error: Unable to create record: "
+                                                     "Permission to send an SMS has not "
+                                                     "been enabled for the region indicated"):
+                                customer["message"] = f"{final_message.strip().replace('"', '')}"
+                                customer["response_code"] = "No Permission to send SMS"
+                                write_log(customer)
+                                continue
+
+                            elif str(err) == ("HTTP 400 error: Unable to create record: "
+                                         "Attempt to send to unsubscribed recipient"):
+                                customer["response_code"] = "Unsubscribed"
+                                unsubscribe_customer_from_sms(customer)
+                                write_log(customer)
+                                continue
+
+                            else:
+                                customer['response_code'] = "Unknown Error"
+                                write_log(customer)
+                                continue
+
+                        else:
+                            response = twilio_message.sid
+
+                    else:
+                        customer['response_code'] = 'Invalid phone'
+                        write_log(customer)
+                        continue
+
+            total_messages_sent += 1
+            customer['count'] = f"{total_messages_sent}/{len(cp_data)}"
+            if test_mode_checkbutton_used() == 1:
+                customer["response_code"] = "test mode"
+            else:
+                customer["response_code"] = response
+            write_log(customer)
+
+        if messagebox.askyesno(title="Completed", message="Would you like to see the log?"):
+            view_log()
+
+    else:
+        pass
+
+
+def write_log(customer):
+    # Create Log
+    header_list = ['CUST_NO', 'FST_NAM', 'PHONE_1', 'LOY_PTS_BAL', 'message', 'response_code', 'count']
+    try:
+        log_file = open(creds.log_file_path, 'r')
+
+    except FileNotFoundError:
+        log_file = open(creds.log_file_path, 'a')
+        w = csv.DictWriter(log_file, delimiter=',', fieldnames=header_list)
+        w.writeheader()
+
+    else:
+        log_file = open(creds.log_file_path, 'a')
+        w = csv.DictWriter(log_file, delimiter=',', fieldnames=header_list)
+
+    w.writerow(customer)
+    log_file.close()
 
 
 def format_phone(phone_number, mode="Twilio", prefix=False):
@@ -282,7 +411,7 @@ def format_phone(phone_number, mode="Twilio", prefix=False):
 # ---------------------------- UI SETUP ------------------------------- #
 window = tkinter.Tk()
 window.title(custom.application_title)
-window.config(padx=30, pady=10, background="#ECE3CE")
+window.config(padx=30, pady=10, background=custom.BACKGROUND_COLOR)
 
 
 def center_window(width=410, height=920):
@@ -425,15 +554,17 @@ def view_log():
 
 
 # Logo
-canvas = tkinter.Canvas(width=350, height=172, background="#ECE3CE", highlightcolor="#ECE3CE", highlightthickness=0)
-logo = tkinter.PhotoImage(file="./images/logo.png")
+canvas = tkinter.Canvas(width=350, height=172, background=custom.BACKGROUND_COLOR, 
+                        highlightcolor=custom.BACKGROUND_COLOR, highlightthickness=0)
+
+logo = tkinter.PhotoImage(file=custom.logo)
 
 canvas.create_image(175, 86, image=logo)
 canvas.grid(column=0, row=0, pady=3, columnspan=3)
 
 # SMS Text Messaging Sub Title
 website_label = tkinter.Label(text="SMS Text Messaging",
-                              font=("Arial", 12), fg=custom.MEDIUM_DARK_GREEN, background="#ECE3CE")
+                              font=("Arial", 12), fg=custom.MEDIUM_DARK_GREEN, background=custom.BACKGROUND_COLOR)
 website_label.grid(column=0, row=1, columnspan=3, pady=5)
 
 # Individual Phone Number Used Checkbox
@@ -511,24 +642,25 @@ listbox.config(state="disabled")
 listbox.grid(row=7, column=0, columnspan=3)
 
 # Calculate and Show List Size
-
 calculate_size_button = tkinter.Button(text="Calculate List Size", command=segment_length, font=("Arial", 10),
-                                       background="#ECE3CE", highlightbackground="#ECE3CE")
+                                       background=custom.BACKGROUND_COLOR, highlightbackground=custom.BACKGROUND_COLOR)
 calculate_size_button.config(state="disabled")
 calculate_size_button.grid(row=8, column=0, columnspan=3, pady=5)
 
-list_size = tkinter.Label(text="", font=("Arial", 9), fg=custom.MEDIUM_GREEN, background="#ECE3CE")
+list_size = tkinter.Label(text="", font=("Arial", 9), fg=custom.MEDIUM_GREEN, background=custom.BACKGROUND_COLOR)
 list_size.grid(column=0, row=9, columnspan=3, pady=2)
 
 # Header Text Label
 header_text_label = tkinter.Label(text="Header Text", font=("Arial", 9),
-                                  fg=custom.MEDIUM_DARK_GREEN, background="#ECE3CE")
+                                  fg=custom.MEDIUM_DARK_GREEN, background=custom.BACKGROUND_COLOR)
 header_text_label.grid(column=0, row=10, columnspan=3, pady=0)
+
 # Header Label
-header_text_label = tkinter.Label(text=custom.header_label_text, font=("Arial", 10), background="#ECE3CE")
+header_text_label = tkinter.Label(text=custom.header_label_text, font=("Arial", 10), background=custom.BACKGROUND_COLOR)
 header_text_label.grid(column=0, row=11, columnspan=3, pady=0)
+
 # Message Box
-message_label = tkinter.Label(text="Message: ", font=("Arial", 10), fg=custom.MEDIUM_DARK_GREEN, background="#ECE3CE")
+message_label = tkinter.Label(text="Message: ", font=("Arial", 10), fg=custom.MEDIUM_DARK_GREEN, background=custom.BACKGROUND_COLOR)
 message_label.grid(column=0, row=12, columnspan=3, pady=3)
 message_box = tkinter.Text(window, width=35, height=4, wrap="word", font=("Arial", 12), fg="black")
 message_box.insert("end", "Replace this text with the SMS message."
@@ -574,12 +706,12 @@ log_button = tkinter.Button(text="View Log", command=view_log, font=("Arial", 10
                             highlightbackground=custom.BACKGROUND_COLOR)
 log_button.grid(row=19, column=1, columnspan=1, pady=3)
 
-progress_text_label = tkinter.Label(text="", font=("Arial", 10), background="#ECE3CE")
+progress_text_label = tkinter.Label(text="", font=("Arial", 10), background=custom.BACKGROUND_COLOR)
 progress_text_label.grid(column=0, row=120, columnspan=3, pady=0)
 
 # Version Number
-header_text_label = tkinter.Label(text="      Version 1.0", font=("Arial", 9),
-                                  fg=custom.MEDIUM_DARK_GREEN, background="#ECE3CE")
+header_text_label = tkinter.Label(text="      Version 1.0.1", font=("Arial", 9),
+                                  fg=custom.MEDIUM_DARK_GREEN, background=custom.BACKGROUND_COLOR)
 header_text_label.grid(column=2, row=19, columnspan=1, pady=0)
 
 redir = WidgetRedirector(message_box)
