@@ -1,6 +1,8 @@
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
+
 now = datetime.now()
+
 # ----------DATE PRESETS------------#
 one_day_ago = date.today()+relativedelta(days=-1)
 five_day_ago = date.today()+relativedelta(days=-5)
@@ -10,50 +12,68 @@ six_months_ago = date.today()+relativedelta(months=-6)
 one_year_ago = date.today()+relativedelta(years=-1)
 two_year_ago = date.today()+relativedelta(years=-2)
 
-
+standard_filter = """
+INCLUDE_IN_MARKETING_MAILOUTS = 'Y' AND 
+PHONE_1 IS NOT NULL AND 
+FST_NAM IS NOT NULL AND
+FST_NAM != ''
 """
-# Management Test Group
+
+# Single Test Only
+test_group_1 = """
+SELECT CUST_NO, FST_NAM, PHONE_1 as phone, LOY_PTS_BAL as rewards
+FROM AR_CUST
+WHERE PHONE_1 = ''
+"""
+# Group Test
 test_group_2 = """
 SELECT CUST_NO, FST_NAM, PHONE_1 as phone, LOY_PTS_BAL as rewards
 FROM AR_CUST
 WHERE PHONE_1 = '' OR PHONE_1 = '' OR PHONE_1 = '' OR PHONE_1 = ''
 """
 # All Retail Customers
-retail_all = """
+retail_all = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE CATEG_COD = 'RETAIL' and PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+WHERE CATEG_COD = 'RETAIL' AND 
+INCLUDE_IN_MARKETING_MAILOUTS = 'Y' AND 
+{standard_filter}
 """
 # All Wholesale Customers
-wholesale_all = """
+wholesale_all = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL as rewards
 FROM AR_CUST
-WHERE CATEG_COD = 'WHOLESALE' and INCLUDE_IN_MARKETING_MAILOUTS = 'Y' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAM != 'Change'
+WHERE CATEG_COD = 'WHOLESALE' AND 
+{standard_filter}
 """
 
 # Selects Most Recent Customers
-retail_recent_1000 = """
+retail_recent_1000 = f"""
 SELECT TOP 1000 CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE CATEG_COD = 'RETAIL' AND PROF_COD_4 = 'Y' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+WHERE CATEG_COD = 'RETAIL' AND 
+{standard_filter}
 ORDER BY LST_SAL_DAT DESC
 """
-retail_recent_2000 = """
+retail_recent_2000 = f"""
 SELECT TOP 2000 CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE CATEG_COD = 'RETAIL' AND PROF_COD_4 = 'Y' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+WHERE CATEG_COD = 'RETAIL' AND 
+{standard_filter}
 ORDER BY LST_SAL_DAT DESC
 """
-retail_recent_3000 = """
+retail_recent_3000 = f"""
 SELECT TOP 3000 CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE CATEG_COD = 'RETAIL' AND PROF_COD_4 = 'Y' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+WHERE CATEG_COD = 'RETAIL' AND 
+{standard_filter}
 ORDER BY LST_SAL_DAT DESC
 """
-retail_recent_4000 = """
+retail_recent_4000 = f"""
 SELECT TOP 4000 CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE CATEG_COD = 'RETAIL' AND PROF_COD_4 = 'Y' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+WHERE CATEG_COD = 'RETAIL' AND 
+{standard_filter}
 ORDER BY LST_SAL_DAT DESC
 """
 # Anyone Who Have Purchased Spring Annuals Over The Past Two Years
@@ -77,7 +97,9 @@ ON
 WHERE
  "IM_ITEM"."ITEM_NO"='45' and (VI_PS_TKT_HIST_LIN.TKT_DAT between '{two_year_ago}-03-01 00:00:00' and 
  '{two_year_ago}-5-31 00:00:00' or VI_PS_TKT_HIST_LIN.TKT_DAT between '{one_year_ago}-03-01 00:00:00' and 
- '{one_year_ago}-5-31 00:00:00') and PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+ '{one_year_ago}-5-31 00:00:00') AND 
+{standard_filter}
+ 
 ORDER BY
   VI_PS_TKT_HIST.TKT_DAT DESC
 """
@@ -102,7 +124,7 @@ ON
 WHERE
  "IM_ITEM"."SUBCAT_COD"='MUM' and (VI_PS_TKT_HIST_LIN.TKT_DAT between '{two_year_ago}-08-01 00:00:00' and 
  '{two_year_ago}-11-15 00:00:00' or VI_PS_TKT_HIST_LIN.TKT_DAT between '{one_year_ago}-08-01 00:00:00' and 
- '{one_year_ago}-11-15 00:00:00') and PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+ '{one_year_ago}-11-15 00:00:00') and {standard_filter}
 ORDER BY
   VI_PS_TKT_HIST.TKT_DAT DESC
 """
@@ -126,7 +148,7 @@ ON
   "VI_PS_TKT_HIST_LIN"."ITEM_NO"="IM_ITEM"."ITEM_NO"
 WHERE
  "IM_ITEM"."CATEG_COD"='Christmas' and VI_PS_TKT_HIST_LIN.TKT_DAT between '{two_year_ago}-11-15 00:00:00' and 
- '{one_year_ago}-12-25 00:00:00' and PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL
+ '{one_year_ago}-12-25 00:00:00' and {standard_filter}
 ORDER BY
   VI_PS_TKT_HIST.TKT_DAT DESC
 """
@@ -135,102 +157,120 @@ no_purchases_12_months = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
 WHERE FST_NAM != 'Change' AND FST_NAM IS NOT NULL AND PHONE_1 IS NOT NULL 
-AND LST_SAL_DAT < '{one_year_ago} 00:00:00'
+AND LST_SAL_DAT < '{one_year_ago} 00:00:00' AND {standard_filter}
 """
 # Customers Who Have Not Made A Purchase In Six Months
 no_purchases_6_months = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
 WHERE FST_NAM != 'Change' AND FST_NAM IS NOT NULL AND PHONE_1 IS NOT NULL 
-AND LST_SAL_DAT < '{six_months_ago} 00:00:00'
+AND LST_SAL_DAT < '{six_months_ago} 00:00:00' AND {standard_filter}
 """
 
 yesterday_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
-WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND TKT_DAT = '{one_day_ago} 00:00:00'
+WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
+TKT_DAT = '{one_day_ago} 00:00:00' AND
+{standard_filter}
 """
 
 five_days_ago_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
-WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND TKT_DAT = '{five_day_ago} 00:00:00'
+WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
+TKT_DAT = '{five_day_ago} 00:00:00' AND
+{standard_filter}
 """
 
 one_week_ago_purchases = f"""
 SELECT CUST_NO, BILL_FST_NAM, BILL_PHONE_1, LOY_PTS_BAL 
 FROM VI_PS_TKT_HIST
-WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND TKT_DAT = '{one_week_ago} 00:00:00'
+WHERE BILL_FST_NAM != 'Change' AND BILL_FST_NAM IS NOT NULL AND BILL_PHONE_1 IS NOT NULL AND 
+TKT_DAT = '{one_week_ago} 00:00:00' AND
+{standard_filter}
 """
 # Birthday Queries
-january_bday = """
+january_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '1' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '1' AND 
+{standard_filter}
 """
 
-february_bday = """
+february_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '2' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '2' AND 
+{standard_filter}
 """
 
-march_bday = """
+march_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '3' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '3' AND 
+{standard_filter}
 """
 
-april_bday = """
+april_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '4' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '4' AND 
+{standard_filter}
 """
 
-may_bday = """
+may_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '5' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '5' AND 
+{standard_filter}
 """
 
-june_bday = """
+june_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '6' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '6' AND 
+{standard_filter}
 """
-july_bday = """
+july_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '7' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
-"""
-
-august_bday = """
-SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
-FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '8' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '7' AND 
+{standard_filter}
 """
 
-september_bday = """
+august_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '9' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '8' AND 
+{standard_filter}
 """
 
-october_bday = """
+september_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '10' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '9' AND 
+{standard_filter}
 """
 
-november_bday = """
+october_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '11' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '10' AND 
+{standard_filter}
 """
 
-december_bday = """
+november_bday = f"""
 SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
 FROM AR_CUST
-WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '12' AND PHONE_1 IS NOT NULL and FST_NAM IS NOT NULL and FST_NAME != 'Change'
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '11' AND 
+{standard_filter}
+"""
+
+december_bday = f"""
+SELECT CUST_NO, FST_NAM, PHONE_1, LOY_PTS_BAL
+FROM AR_CUST
+WHERE PROF_COD_4 = 'Y' AND PROF_COD_2 = '12' AND 
+{standard_filter}
 """
 
