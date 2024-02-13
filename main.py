@@ -55,15 +55,13 @@ def select_file():
     global csv_data_dict
     csv_data_dict = csv_data.to_dict('records')
     # Format phone number
-    z = 0
     for customer in csv_data_dict:
-        customer_phone_from_csv = csv_data_dict[z]["PHONE_1"]
+        customer_phone_from_csv = customer["PHONE_1"]
         try:
-            csv_data_dict[z]["PHONE_1"] = format_phone(customer_phone_from_csv, prefix=True)
+            customer["PHONE_1"] = format_phone(customer_phone_from_csv, prefix=True)
         except:
-            csv_data_dict[z]["PHONE_1"] = "error"
-        else:
-            z += 1
+            customer["PHONE_1"] = "error"
+            continue   
 
     # Show first person's info
     try:
@@ -89,18 +87,16 @@ def query_db(sql_query):
             f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={SERVER};PORT=1433;DATABASE={DATABASE};'
             f'UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;timeout=3')
         cursor = connection.cursor()
-        SQL = cursor.execute(sql_query).fetchall()
+        response = cursor.execute(sql_query).fetchall()
         cp_data = []
-        x = 0
         start_code = "+1"
-        for _ in SQL:
+        for x in response:
             cp_data.append({
-                "CUST_NO": SQL[x][0],
-                "FST_NAM": SQL[x][1],
-                "PHONE_1": start_code + SQL[x][2].replace("-", ""),
-                "LOY_PTS_BAL": SQL[x][3]
+                "CUST_NO": x[0],
+                "FST_NAM": x[1],
+                "PHONE_1": start_code + x[2].replace("-", ""),
+                "LOY_PTS_BAL": x[3]
             })
-            x += 1
         # Close Connection
         cursor.close()
         connection.close()
@@ -190,7 +186,7 @@ def send_text():
         else:
             message_script = message_box.get("1.0", END)
             confirm_box = messagebox.askokcancel(title="Ready to Send?", message=f"These are the details entered:"
-                                             f" \n\nMessage: {message_script}\n\nSent to: {segment}")
+                                                       f" \n\nMessage: {message_script}\n\nSent to: {segment}")
     elif single_number_checkbutton_used() == 1:
         original_number = single_number_input.get()
         single_phone = format_phone(original_number, prefix=True)
@@ -249,11 +245,11 @@ def send_text():
             if single_number_checkbutton_used() == 1:
                 final_message = message_script
             elif name == 'Change':
-                final_message = header_text + message_script.replace("{name}", "").replace("{rewards}",
-                                                                                             rewards)
+                final_message = (header_text + message_script.replace("{name}", "")
+                                 .replace("{rewards}", rewards))
             else:
-                final_message = header_text + message_script.replace("{name}", name).replace("{rewards}",
-                                                                                         rewards)
+                final_message = (header_text + message_script.replace("{name}", name)
+                                 .replace("{rewards}", rewards))
 
             if photo_checkbutton_used() == 1:
 
@@ -265,11 +261,11 @@ def send_text():
                         photo_url = photo_input.get()
                         try:
                             twilio_message = client.messages.create(
-                            from_=creds.TWILIO_PHONE_NUMBER,
-                            media_url=[photo_url],
-                            to=customer["PHONE_1"],
-                            body=final_message
-                        )
+                                from_=creds.TWILIO_PHONE_NUMBER,
+                                media_url=[photo_url],
+                                to=customer["PHONE_1"],
+                                body=final_message
+                                )
                         except twilio.base.exceptions.TwilioRestException as err:
                             customer["message"] = f"{final_message.strip().replace('"', '')}"
                             if str(err)[-22:] == "is not a mobile number":
@@ -335,7 +331,7 @@ def send_text():
                                 continue
 
                             elif str(err) == ("HTTP 400 error: Unable to create record: "
-                                         "Attempt to send to unsubscribed recipient"):
+                                              "Attempt to send to unsubscribed recipient"):
                                 customer["response_code"] = "Unsubscribed"
                                 unsubscribe_customer_from_sms(customer)
                                 write_log(customer)
@@ -372,8 +368,9 @@ def send_text():
 def write_log(customer):
     # Create Log
     header_list = ['CUST_NO', 'FST_NAM', 'PHONE_1', 'LOY_PTS_BAL', 'message', 'response_code', 'count']
+    
     try:
-        log_file = open(creds.log_file_path, 'r')
+        open(creds.log_file_path, 'r')
 
     except FileNotFoundError:
         log_file = open(creds.log_file_path, 'a')
@@ -554,7 +551,7 @@ def view_log():
 
 
 # Logo
-canvas = tkinter.Canvas(width=350, height=172, background=custom.BACKGROUND_COLOR, 
+canvas = tkinter.Canvas(width=350, height=172, background=custom.BACKGROUND_COLOR,
                         highlightcolor=custom.BACKGROUND_COLOR, highlightthickness=0)
 
 logo = tkinter.PhotoImage(file=custom.logo)
@@ -660,7 +657,8 @@ header_text_label = tkinter.Label(text=custom.header_label_text, font=("Arial", 
 header_text_label.grid(column=0, row=11, columnspan=3, pady=0)
 
 # Message Box
-message_label = tkinter.Label(text="Message: ", font=("Arial", 10), fg=custom.MEDIUM_DARK_GREEN, background=custom.BACKGROUND_COLOR)
+message_label = tkinter.Label(text="Message: ", font=("Arial", 10), fg=custom.MEDIUM_DARK_GREEN, 
+                              background=custom.BACKGROUND_COLOR)
 message_label.grid(column=0, row=12, columnspan=3, pady=3)
 message_box = tkinter.Text(window, width=35, height=4, wrap="word", font=("Arial", 12), fg="black")
 message_box.insert("end", "Replace this text with the SMS message."
